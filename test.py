@@ -38,7 +38,8 @@ def pinCallback(channel):
         print "left button"
     if value == 77:
         print "middle button"
-
+    if value == 65:
+        print "knob press"
 
 GPIO.add_event_detect(pin, GPIO.BOTH, callback=pinCallback)
 while True:
