@@ -5,63 +5,64 @@ from smbus2 import SMBusWrapper
 import time
 import RPi.GPIO as GPIO
 import atexit
+import constant
 
-pin=40
-resetPin=38
-operations = ["one", "two", "three", "four", "sbleventy"]
-opIndex = 0
+class PanelController:
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(resetPin, GPIO.OUT)
+    def __init__(self):
+        self.operations = {
+            33: "knob turn right",
+            34: "knob turn left",
+            65: "knob button",
+            69: "white button",
+            73: "soft button left",
+            77: "soft button right"
+        }
 
-def resetBoard():
-    GPIO.output(resetPin, GPIO.LOW)
-    GPIO.output(resetPin, GPIO.HIGH)
-    GPIO.output(resetPin, GPIO.LOW)
+        self.opIndex = 0
 
-@atexit.register
-def revert():
-    print "Goodbye"
-    resetBoard()
-    GPIO.cleanup()
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(constant.DETECT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(resetPin, GPIO.OUT)
 
-def read(address):
-    with SMBusWrapper(1) as bus:
-        b = bus.read_byte_data(0x3d, address)
-        return b
+        # watches int pin event 
+        GPIO.add_event_detect(constant.DETECT, GPIO.BOTH, callback=pinCallback)
 
-def doLed(led):
-    pwm = read(led)
-    with SMBusWrapper(1) as bus:
-        if pwm == 0:
-            bus.write_byte_data(0x3d, led, 100)
+    def resetBoard():
+        GPIO.output(constant.RESET, GPIO.LOW)
+        GPIO.output(constant.RESET, GPIO.HIGH)
+        GPIO.output(constant.RESET, GPIO.LOW)
+
+    def keepAlive():
+        while True:
+            time.sleep(3)
+
+    def read(address):
+        with SMBusWrapper(1) as bus:
+            b = bus.read_byte_data(constant.DEVICE_ADDR, address)
+            return b
+
+    def doLed(led):
+        pwm = read(led)
+        with SMBusWrapper(1) as bus:
+            if pwm == constant.PWM_LOW:
+                bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_HIGH)
+            else:
+                bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
+
+    def scrollThrough(direction):
+        print direction
+
+    def pinCallback(self, channel):
+        value = read(constant.READ_ADDR)
+        if value in self.operations:
+            print self.operations[value]
         else:
-            bus.write_byte_data(0x3d, led, 0)
+            print value
 
-def scrollThrough(direction):
-    print direction
-
-def pinCallback(channel):
-    value = read(0x01)
-    if value == 34:
-       # print "turn right"
-       scrollThrough("plus")
-    if value == 33:
-        scrollThrough("minus")
-       # print "turn left"
-    if value == 69:
-        print "big button"
-    if value == 73:
-        doLed(0x21)
-        print "left button"
-    if value == 77:
-        doLed(0x20)
-        print "middle button"
-    if value == 65:
-        print "knob press"
-
-GPIO.add_event_detect(pin, GPIO.BOTH, callback=pinCallback)
-while True:
-    time.sleep(3)
+    @atexit.register
+    def revert():
+        print "Goodbye"
+        resetBoard()
+        GPIO.cleanup()
 
