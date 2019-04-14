@@ -23,26 +23,30 @@ class PanelController:
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(constant.DETECT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(resetPin, GPIO.OUT)
+        GPIO.setup(constant.RESET, GPIO.OUT)
 
         # watches int pin event 
-        GPIO.add_event_detect(constant.DETECT, GPIO.BOTH, callback=pinCallback)
+        GPIO.add_event_detect(constant.DETECT, GPIO.BOTH, callback=self.pinCallback)
 
+    @atexit.register
     def resetBoard():
         GPIO.output(constant.RESET, GPIO.LOW)
         GPIO.output(constant.RESET, GPIO.HIGH)
         GPIO.output(constant.RESET, GPIO.LOW)
+        GPIO.cleanup()
+        print "Goodbye"
 
-    def keepAlive():
+    def keepAlive(self):
         while True:
+            print "heartbeat"
             time.sleep(3)
 
-    def read(address):
+    def read(self, address):
         with SMBusWrapper(1) as bus:
             b = bus.read_byte_data(constant.DEVICE_ADDR, address)
             return b
 
-    def doLed(led):
+    def doLed(self, led):
         pwm = read(led)
         with SMBusWrapper(1) as bus:
             if pwm == constant.PWM_LOW:
@@ -50,19 +54,11 @@ class PanelController:
             else:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
-    def scrollThrough(direction):
+    def scrollThrough(self, direction):
         print direction
 
     def pinCallback(self, channel):
-        value = read(constant.READ_ADDR)
+        value = self.read(constant.READ_ADDR)
         if value in self.operations:
             print self.operations[value]
-        else:
-            print value
-
-    @atexit.register
-    def revert():
-        print "Goodbye"
-        resetBoard()
-        GPIO.cleanup()
 

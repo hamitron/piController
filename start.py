@@ -1,6 +1,6 @@
-import panel
+from panel import PanelController
 
-p = panel()
+p = PanelController()
 
 print "HERE WE GO"
 
