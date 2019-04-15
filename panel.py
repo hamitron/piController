@@ -11,15 +11,17 @@ class PanelController:
 
     def __init__(self):
         self.operations = {
-            33: "knob turn right",
+            33: "turn right",
             34: "knob turn left",
             65: "knob button",
             69: "white button",
             73: "soft button left",
             77: "soft button right"
         }
+        
+        self.menuOptions = ["Take Photo", "Shoot Video", "Settings", "Shut Down"]
 
-        self.opIndex = 0
+        self.menuIndex = 0
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(constant.DETECT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -38,7 +40,6 @@ class PanelController:
 
     def keepAlive(self):
         while True:
-            print "heartbeat"
             time.sleep(3)
 
     def read(self, address):
@@ -54,11 +55,20 @@ class PanelController:
             else:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
-    def scrollThrough(self, direction):
-        print direction
+    def scroll(self, direction):
+        if direction == "left":
+            self.menuIndex = ((self.menuIndex - 1) % 4)
+        elif direction == "right":
+            self.menuIndex = ((self.menuIndex + 1) % 4)
+        statement = self.menuOptions[self.menuIndex] 
+        print "\033[44;33m" + statement + "\033[m"
 
     def pinCallback(self, channel):
         value = self.read(constant.READ_ADDR)
         if value in self.operations:
-            print self.operations[value]
-
+            if value == 33:
+                self.scroll("left")
+            elif value == 34:
+                self.scroll("right")
+            else:
+                print self.operations[value]
