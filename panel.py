@@ -56,12 +56,12 @@ class PanelController:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
     def scroll(self, direction):
+        statement = self.menuOptions[self.menuIndex] 
+        print "\033[44;33m" + statement + "\033[m"
         if direction == "left":
             self.menuIndex = ((self.menuIndex - 1) % 4)
         elif direction == "right":
             self.menuIndex = ((self.menuIndex + 1) % 4)
-        statement = self.menuOptions[self.menuIndex] 
-        print "\033[44;33m" + statement + "\033[m"
 
     def pinCallback(self, channel):
         value = self.read(constant.READ_ADDR)
