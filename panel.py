@@ -2,6 +2,7 @@
 # button presses and knob turns perform actions
 
 from smbus2 import SMBusWrapper
+import uuid
 import time
 import RPi.GPIO as GPIO
 import atexit
@@ -11,11 +12,8 @@ import subprocess
 class PanelController:
 
     def __init__(self):
-        GPIO.setmode(GPIO.BOARD)
-
-        self.cameraOn = False
+        # the camera subprocess variable
         self.cameraProc = None
-
         self.operations = {
             33: "turn right",
             34: "knob turn left",
@@ -24,11 +22,10 @@ class PanelController:
             73: "soft button left",
             77: "soft button right"
         }
-        
         self.menuOptions = ["Take Photo", "Shoot Video", "Settings", "Shut Down"]
-
         self.menuIndex = 0
 
+        GPIO.setmode(GPIO.BOARD)
         GPIO.setup(constant.DETECT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(constant.RESET, GPIO.OUT)
 
@@ -68,14 +65,18 @@ class PanelController:
         elif direction == "right":
             self.menuIndex = ((self.menuIndex + 1) % 4)
 
-    def operateCamera(self):
-        print "camera operation"
+    def toggleCamera(self):
         if self.cameraProc == None:
-            self.cameraProc = subprocess.Popen(["raspistill", "-s"])
+            proc = ["raspistill", "-t", "0", "-s", "-o", "/home/pi/piController/photos/img%04d.jpg"]
+            self.cameraProc = subprocess.Popen(proc)
         else:
-            print "terminate"
             self.cameraProc.kill()
             self.cameraProc = None
+    
+    def takePhoto(self):
+        if self.cameraProc != None:
+            self.cameraProc.send_signal(10)            
+
     def pinCallback(self, channel):
         value = self.read(constant.READ_ADDR)
         if value in self.operations:
@@ -83,9 +84,11 @@ class PanelController:
                 self.scroll("left")
             elif value == 34:
                 self.scroll("right")
+            elif value == 65:
+                self.doLed(0x21)
+                self.toggleCamera()
             elif value == 69:
-                self.doLed(0x20)
-                self.operateCamera()
+                self.takePhoto()
             else:
                 print self.operations[value]
 
