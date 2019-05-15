@@ -6,10 +6,16 @@ import time
 import RPi.GPIO as GPIO
 import atexit
 import constant
+import subprocess
 
 class PanelController:
 
     def __init__(self):
+        GPIO.setmode(GPIO.BOARD)
+
+        self.cameraOn = False
+        self.cameraProc = None
+
         self.operations = {
             33: "turn right",
             34: "knob turn left",
@@ -23,7 +29,6 @@ class PanelController:
 
         self.menuIndex = 0
 
-        GPIO.setmode(GPIO.BOARD)
         GPIO.setup(constant.DETECT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(constant.RESET, GPIO.OUT)
 
@@ -48,7 +53,7 @@ class PanelController:
             return b
 
     def doLed(self, led):
-        pwm = read(led)
+        pwm = self.read(led)
         with SMBusWrapper(1) as bus:
             if pwm == constant.PWM_LOW:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_HIGH)
@@ -63,6 +68,14 @@ class PanelController:
         elif direction == "right":
             self.menuIndex = ((self.menuIndex + 1) % 4)
 
+    def operateCamera(self):
+        print "camera operation"
+        if self.cameraProc == None:
+            self.cameraProc = subprocess.Popen(["raspistill", "-s"])
+        else:
+            print "terminate"
+            self.cameraProc.kill()
+            self.cameraProc = None
     def pinCallback(self, channel):
         value = self.read(constant.READ_ADDR)
         if value in self.operations:
@@ -70,5 +83,9 @@ class PanelController:
                 self.scroll("left")
             elif value == 34:
                 self.scroll("right")
+            elif value == 69:
+                self.doLed(0x20)
+                self.operateCamera()
             else:
                 print self.operations[value]
+
