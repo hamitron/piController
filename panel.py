@@ -67,7 +67,7 @@ class PanelController:
 
     def toggleCamera(self):
         if self.cameraProc == None:
-            proc = ["raspistill", "-t", "0", "-s", "-o", "/home/pi/piController/photos/img%04d.jpg"]
+            proc = ["raspistill", "-t", "0", "-s", "-o", "/home/pi/piController/photos/img%04d.jpg", "-l", "img%04d.jpg"]
             self.cameraProc = subprocess.Popen(proc)
         else:
             self.cameraProc.kill()
