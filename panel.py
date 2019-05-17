@@ -46,7 +46,7 @@ class PanelController:
 
     def read(self, address):
         with SMBusWrapper(1) as bus:
-            b = bus.read_byte_data(constant.DEVICE_ADDR, address)
+            b = bus.read_byte_data(constant.DEVICE_ADDR, address, False)
             return b
 
     def doLed(self, led):
@@ -58,23 +58,26 @@ class PanelController:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
     def scroll(self, direction):
-        statement = self.menuOptions[self.menuIndex] 
-        print "\033[44;33m" + statement + "\033[m"
         if direction == "left":
             self.menuIndex = ((self.menuIndex - 1) % 4)
         elif direction == "right":
             self.menuIndex = ((self.menuIndex + 1) % 4)
+        statement = self.menuOptions[self.menuIndex] 
+        print "\033[44;33m" + statement + "\033[m"
 
     def toggleCamera(self):
         if self.cameraProc == None:
             if self.menuIndex == 0:
                 proc = ["raspistill", "-s","-dt", "-o", "photos/img%04d.jpg"] 
                 self.cameraProc = subprocess.Popen(proc)
-            else:
+            elif self.menuIndex == 1:
                 filename = uuid.uuid1()
-                filepath = "photos/{}.h264".format(filename)
+                filepath = "video/{}.h264".format(filename)
                 proc = ["raspivid", "-t", "0", "-s", "-o", filepath, "-i", "pause"] 
                 self.cameraProc = subprocess.Popen(proc)
+            elif self.menuIndex == 3:
+                print "GoodBye"
+                subprocess.call(["shutdown", "-h", "now"])
         else:
             self.cameraProc.kill()
             self.cameraProc = None
@@ -82,6 +85,8 @@ class PanelController:
     def takePhoto(self):
         if self.cameraProc != None:
             self.cameraProc.send_signal(10)            
+        else:
+            print "Toggle Camera First"
 
     def pinCallback(self, channel):
         value = self.read(constant.READ_ADDR)
@@ -95,6 +100,10 @@ class PanelController:
                 self.toggleCamera()
             elif value == 69:
                 self.takePhoto()
+            elif value == 77:
+                statement = self.menuOptions[self.menuIndex] 
+                print "\033[44;33m" + statement + "\033[m"
+                print self.menuIndex
             else:
                 print self.operations[value]
 
