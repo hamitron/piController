@@ -67,8 +67,14 @@ class PanelController:
 
     def toggleCamera(self):
         if self.cameraProc == None:
-            proc = ["raspistill", "-t", "0", "-s", "-o", "/home/pi/piController/photos/img%04d.jpg", "-l", "img%04d.jpg"]
-            self.cameraProc = subprocess.Popen(proc)
+            if self.menuIndex == 0:
+                proc = ["raspistill", "-s","-dt", "-o", "photos/img%04d.jpg"] 
+                self.cameraProc = subprocess.Popen(proc)
+            else:
+                filename = uuid.uuid1()
+                filepath = "photos/{}.h264".format(filename)
+                proc = ["raspivid", "-t", "0", "-s", "-o", filepath, "-i", "pause"] 
+                self.cameraProc = subprocess.Popen(proc)
         else:
             self.cameraProc.kill()
             self.cameraProc = None
