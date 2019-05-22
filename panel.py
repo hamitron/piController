@@ -62,6 +62,11 @@ class PanelController:
             else:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
+    def turnAllLedsOff(self):
+        with SMBusWrapper(1) as bus:
+            bus.write_byte_data(constant.DEVICE_ADDR, constant.GREEN_LED, constant.PWM_LOW)
+            bus.write_byte_data(constant.DEVICE_ADDR, constant.RED_LED, constant.PWM_LOW)
+
     def scroll(self, direction):
         if self.cameraProc != None:
             return
@@ -80,17 +85,19 @@ class PanelController:
     def toggleCamera(self):
         if self.cameraProc == None:
             if self.menuIndex == 0:
+                self.doLed(constant.GREEN_LED)
                 proc = ["raspistill", "-s","-dt", "-o", "photos/img%04d.jpg"] 
                 self.cameraProc = subprocess.Popen(proc)
             elif self.menuIndex == 1:
-                filename = uuid.uuid1()
-                filepath = "video/{}.h264".format(filename)
+                filename = uuid.uuid4()
+                filepath = "video/{}%%.h264".format(filename)
                 proc = ["raspivid", "-t", "0", "-s", "-o", filepath, "-i", "pause"] 
                 self.cameraProc = subprocess.Popen(proc)
             elif self.menuIndex == 3:
                 print "GoodBye"
                 subprocess.call(["shutdown", "-h", "now"])
         else:
+            self.turnAllLedsOff()
             self.cameraProc.kill()
             self.cameraProc = None
     
@@ -98,7 +105,6 @@ class PanelController:
         if self.cameraProc != None:
             self.cameraProc.send_signal(10)            
             if self.menuIndex == 1:
-               self.doLed(constant.GREEN_LED)
                self.doLed(constant.RED_LED)
         else:
             print "Toggle Camera First"
@@ -111,7 +117,6 @@ class PanelController:
             elif value == 34:
                 self.scroll("right")
             elif value == 65:
-                self.doLed(constant.GREEN_LED)
                 self.toggleCamera()
             elif value == 69:
                 self.takePhoto()
