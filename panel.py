@@ -90,7 +90,7 @@ class PanelController:
                 self.cameraProc = subprocess.Popen(proc)
             elif self.menuIndex == 1:
                 filename = uuid.uuid4()
-                filepath = "video/{}%%.h264".format(filename)
+                filepath = "video/{}.h264".format(filename)
                 proc = ["raspivid", "-t", "0", "-s", "-o", filepath, "-i", "pause"] 
                 self.cameraProc = subprocess.Popen(proc)
             elif self.menuIndex == 3:
