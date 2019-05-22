@@ -12,4 +12,5 @@ if you do write_byte_data(0x3d,0x11,0b.......x)
 that'll set the beep to different things.
 dot means 0 x means 1 idk yeah confusing.
 
-ok cool guy.
+exporting video:
+use MP4Box -add videofilename.h264 exportd/outputfilename.mp4

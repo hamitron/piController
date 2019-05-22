@@ -9,5 +9,5 @@ RED_LED = 0x21
 GREEN_LED = 0x20
 
 #defaults
-PWM_HIGH = 100
+PWM_HIGH = 75
 PWM_LOW = 0

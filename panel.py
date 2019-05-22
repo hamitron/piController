@@ -14,6 +14,8 @@ class PanelController:
     def __init__(self):
         # the camera subprocess variable
         self.cameraProc = None
+        self.cameraRecording = False
+
         self.operations = {
             33: "turn right",
             34: "knob turn left",
@@ -58,12 +60,19 @@ class PanelController:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
     def scroll(self, direction):
+        if self.cameraProc != None:
+            return
+        subprocess.call('clear', shell=True)
         if direction == "left":
             self.menuIndex = ((self.menuIndex - 1) % 4)
         elif direction == "right":
             self.menuIndex = ((self.menuIndex + 1) % 4)
         statement = self.menuOptions[self.menuIndex] 
-        print "\033[44;33m" + statement + "\033[m"
+        for option in self.menuOptions:
+            if option == statement:
+                print "\033[44;33m" + statement + "\033[m"
+            else:
+                print option
 
     def toggleCamera(self):
         if self.cameraProc == None:
@@ -85,6 +94,9 @@ class PanelController:
     def takePhoto(self):
         if self.cameraProc != None:
             self.cameraProc.send_signal(10)            
+            if self.menuIndex == 1:
+               self.doLed(constant.GREEN_LED)
+               self.doLed(constant.RED_LED)
         else:
             print "Toggle Camera First"
 
@@ -96,7 +108,7 @@ class PanelController:
             elif value == 34:
                 self.scroll("right")
             elif value == 65:
-                self.doLed(0x21)
+                self.doLed(constant.GREEN_LED)
                 self.toggleCamera()
             elif value == 69:
                 self.takePhoto()
