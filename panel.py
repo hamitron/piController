@@ -14,7 +14,6 @@ class PanelController:
     def __init__(self):
         # the camera subprocess variable
         self.cameraProc = None
-        self.cameraRecording = False
 
         self.operations = {
             33: "turn right",
@@ -47,8 +46,12 @@ class PanelController:
             time.sleep(3)
 
     def read(self, address):
+        b = None
         with SMBusWrapper(1) as bus:
-            b = bus.read_byte_data(constant.DEVICE_ADDR, address, False)
+            try:
+                b = bus.read_byte_data(constant.DEVICE_ADDR, address, False)
+            except IOError:
+                b = 0
             return b
 
     def doLed(self, led):
