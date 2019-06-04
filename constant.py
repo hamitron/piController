@@ -1,4 +1,4 @@
-#pins
+# pins
 DETECT = 40
 RESET = 38
 
@@ -8,6 +8,9 @@ READ_ADDR = 0x01
 RED_LED = 0x20
 GREEN_LED = 0x21
 
-#defaults
+# defaults
 PWM_HIGH = 75
 PWM_LOW = 0
+
+# camera signal
+CAMERA_SIGNAL = 10

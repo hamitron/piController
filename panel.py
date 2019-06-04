@@ -9,11 +9,12 @@ import atexit
 import constant
 import subprocess
 
+
 class PanelController:
 
     def __init__(self):
         # the camera subprocess variable
-        self.cameraProc = None
+        self.camera_process = None
 
         self.operations = {
             33: "turn right",
@@ -31,17 +32,19 @@ class PanelController:
         GPIO.setup(constant.RESET, GPIO.OUT)
 
         # watches int pin event 
-        GPIO.add_event_detect(constant.DETECT, GPIO.BOTH, callback=self.pinCallback)
+        GPIO.add_event_detect(constant.DETECT, GPIO.BOTH, callback=self.pin_callback)
+        
+        self.display_menu()
 
     @atexit.register
-    def resetBoard():
+    def reset_board(self):
         GPIO.output(constant.RESET, GPIO.LOW)
         GPIO.output(constant.RESET, GPIO.HIGH)
         GPIO.output(constant.RESET, GPIO.LOW)
         GPIO.cleanup()
         print "Goodbye"
 
-    def keepAlive(self):
+    def keep_alive(self):
         while True:
             time.sleep(3)
 
@@ -54,7 +57,7 @@ class PanelController:
                 b = 0
             return b
 
-    def doLed(self, led):
+    def change_led_state(self, led):
         pwm = self.read(led)
         with SMBusWrapper(1) as bus:
             if pwm == constant.PWM_LOW:
@@ -62,54 +65,67 @@ class PanelController:
             else:
                 bus.write_byte_data(constant.DEVICE_ADDR, led, constant.PWM_LOW)
 
-    def turnAllLedsOff(self):
+    def turn_off_all_leds(self):
         with SMBusWrapper(1) as bus:
             bus.write_byte_data(constant.DEVICE_ADDR, constant.GREEN_LED, constant.PWM_LOW)
             bus.write_byte_data(constant.DEVICE_ADDR, constant.RED_LED, constant.PWM_LOW)
 
     def scroll(self, direction):
-        if self.cameraProc != None:
+        # prevent action during camera operation
+        if self.camera_process is not None:
             return
+
+        # clear the terminal
         subprocess.call('clear', shell=True)
+
         if direction == "left":
             self.menuIndex = ((self.menuIndex - 1) % 4)
         elif direction == "right":
             self.menuIndex = ((self.menuIndex + 1) % 4)
-        statement = self.menuOptions[self.menuIndex] 
+            
+        self.display_menu()
+
+    def display_menu(self):
+        statement = self.menuOptions[self.menuIndex]
         for option in self.menuOptions:
             if option == statement:
                 print "\033[44;33m" + statement + "\033[m"
             else:
                 print option
-
-    def toggleCamera(self):
-        if self.cameraProc == None:
+                
+    def toggle_camera(self):
+        # toggle on
+        if self.camera_process is None:
             if self.menuIndex == 0:
-                self.doLed(constant.GREEN_LED)
+                self.change_led_state(constant.GREEN_LED)
                 proc = ["raspistill", "-s","-dt", "-o", "photos/img%04d.jpg"] 
-                self.cameraProc = subprocess.Popen(proc)
+                self.camera_process = subprocess.Popen(proc)
             elif self.menuIndex == 1:
                 filename = uuid.uuid4()
                 filepath = "video/{}.h264".format(filename)
                 proc = ["raspivid", "-t", "0", "-s", "-o", filepath, "-i", "pause"] 
-                self.cameraProc = subprocess.Popen(proc)
+                self.camera_process = subprocess.Popen(proc)
             elif self.menuIndex == 3:
                 print "GoodBye"
                 subprocess.call(["shutdown", "-h", "now"])
         else:
-            self.turnAllLedsOff()
-            self.cameraProc.kill()
-            self.cameraProc = None
+            # toggle off
+            self.turn_off_all_leds()
+            self.camera_process.kill()
+            self.camera_process = None
     
-    def takePhoto(self):
-        if self.cameraProc != None:
-            self.cameraProc.send_signal(10)            
+    def take_photo(self):
+        if self.camera_process is not None:
+            # send signal to camera operation
+            self.camera_process.send_signal(constant.CAMERA_SIGNAL)
+            
+            # when camera operation is video, use red LED to notate recording
             if self.menuIndex == 1:
-               self.doLed(constant.RED_LED)
+                self.change_led_state(constant.RED_LED)
         else:
             print "Toggle Camera First"
 
-    def pinCallback(self, channel):
+    def pin_callback(self, channel):
         value = self.read(constant.READ_ADDR)
         if value in self.operations:
             if value == 33:
@@ -117,13 +133,12 @@ class PanelController:
             elif value == 34:
                 self.scroll("right")
             elif value == 65:
-                self.toggleCamera()
+                self.toggle_camera()
             elif value == 69:
-                self.takePhoto()
+                self.take_photo()
             elif value == 77:
                 statement = self.menuOptions[self.menuIndex] 
                 print "\033[44;33m" + statement + "\033[m"
                 print self.menuIndex
             else:
                 print self.operations[value]
-
